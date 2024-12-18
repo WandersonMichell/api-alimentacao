@@ -1,3 +1,4 @@
+from sqlmodel import create_engine, SQLModel
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .users_controller import router as user_router
@@ -19,10 +20,12 @@ def create_app():
     # Rotas
     app.include_router(user_router, tags=["Users"])
 
-    # Inicializar o banco de dados (evite problemas fora do contexto)
+    # Inicializar o banco de dados no evento de inicialização
     @app.on_event("startup")
     async def startup_event():
-        get_engine()
+        engine = get_engine()
+        # Cria as tabelas no banco de dados
+        SQLModel.metadata.create_all(engine)
 
     return app
 

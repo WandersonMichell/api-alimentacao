@@ -6,6 +6,7 @@ from decouple import config
 from src.auth_utils import get_logged_user, hash_password
 from src.database import get_engine
 from src.models import BaseUser, SignInUserRequest, SignUpUserRequest, User, UserData
+from pydantic import BaseModel
 from passlib.context import CryptContext
 import jwt
 
@@ -49,7 +50,7 @@ def signin(signin_data: SignInUserRequest):
   with Session(get_engine()) as session:
     # pegar usuário por username
     
-    sttm = select(User).where(User.mome == signin_data.nome)
+    sttm = select(User).where(User.nome == signin_data.nome)
     user = session.exec(sttm).first()
     
     if not user: # não encontrou usuário
@@ -68,10 +69,10 @@ def signin(signin_data: SignInUserRequest):
     
     # Tá tudo OK pode gerar um Token JWT e devolver
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = jwt.encode({'sub': user.username, 'exp': expires_at}, key=SECRET_KEY, algorithm=ALGORITHM)
+    access_token = jwt.encode({'sub': user.nome, 'exp': expires_at}, key=SECRET_KEY, algorithm=ALGORITHM)
 
     expires_rt = datetime.now(timezone.utc) + timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES)
-    refresh_token = jwt.encode({'sub': user.username, 'exp': expires_rt}, key=SECRET_KEY, algorithm=ALGORITHM)
+    refresh_token = jwt.encode({'sub': user.nome, 'exp': expires_rt}, key=SECRET_KEY, algorithm=ALGORITHM)
 
 
     return {'access_token': access_token, 'refresh_token': refresh_token}
@@ -79,3 +80,22 @@ def signin(signin_data: SignInUserRequest):
 @router.get('/me', response_model=UserData)
 def me(user: Annotated[User, Depends(get_logged_user)]):
   return user
+
+# Modelo de resposta que exclui a senha
+class UserResponse(BaseModel):
+    id: int
+    nome: str  # Use o nome correto do campo que está no modelo User
+    email: str  # Outros campos que você deseja expor
+
+    class Config:
+        from_attributes = True  # Necessário para usar a ORM diretamente
+
+@router.get("/lista")
+def lista():
+    with Session(get_engine()) as session:
+        # Consultar todos os usuários
+        statement = select(User)
+        users = session.exec(statement).all()  # Obtém todos os resultados como uma lista
+        
+        # Retornar apenas os dados sem a senha
+        return [UserResponse.from_orm(user) for user in users]
