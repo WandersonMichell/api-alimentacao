@@ -25,7 +25,7 @@ signupForm.addEventListener("submit", function (event) {
     };
 
     // Envia os dados para o endpoint usando fetch
-    fetch("https://urban-parakeet-xqqvwg54765cpjvj-8000.app.github.dev/signup", {
+    fetch("https://api-alimentacao.onrender.com/signup", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
